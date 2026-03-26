@@ -7,14 +7,17 @@ from linebot.v3.messaging import (
     ReplyMessageRequest, TextMessage
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from google import genai
 
 app = Flask(__name__)
 
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 # ──────────────────────────────────────────
@@ -143,32 +146,74 @@ WELCOME_MSG = """👋 你好！我是你的刷卡顧問。
 直接輸入你的消費情境就好 👇"""
 
 
-def get_advice(text: str) -> str:
-    text_lower = text.lower()
+def build_rules_text() -> str:
+    lines = []
+    for rule in RULES:
+        lines.append(f"【關鍵字】{', '.join(rule['keywords'])}")
+        lines.append(f"  最佳卡片：{rule['card']}，回饋：{rule['rate']}")
+        lines.append(f"  怎麼刷：{rule['how']}")
+        if rule.get("backup"):
+            lines.append(f"  備選：{rule['backup']}")
+        if rule.get("caution"):
+            lines.append(f"  注意：{rule['caution']}")
+        lines.append("")
+    return "\n".join(lines)
 
+
+SYSTEM_PROMPT = f"""你是一位專業的信用卡刷卡顧問，使用者會告訴你他要在哪裡消費，你要根據以下規則表給出最佳建議。
+
+規則表：
+{build_rules_text()}
+
+回覆規則：
+1. 根據使用者的消費情境，從規則表中找出最適合的卡片
+2. 用親切口語的繁體中文回覆，不要太正式
+3. 回覆格式：
+   🏆 最佳選擇：[卡片名稱]
+   💰 回饋：[回饋率]
+
+   📋 怎麼刷：
+   [說明]
+
+   🥈 備選：[備選卡片]（如果有的話）
+
+   ⚠️ 注意：[注意事項]（如果有的話）
+4. 如果情境不明確，請追問使用者
+5. 回覆要簡潔，不要超過 300 字
+6. 如果完全找不到對應規則，建議刷永豐大戶卡 3.5%"""
+
+
+def get_advice(text: str) -> str:
+    try:
+        prompt = f"{SYSTEM_PROMPT}\n\n使用者說：{text}"
+        response = gemini_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
+        return response.text
+    except Exception as e:
+        print(f"Gemini error: {e}")
+        return get_advice_fallback(text)
+
+
+def get_advice_fallback(text: str) -> str:
+    text_lower = text.lower()
     for rule in RULES:
         for keyword in rule["keywords"]:
             if keyword in text_lower:
                 msg = f"🏆 最佳選擇：{rule['card']}\n"
                 msg += f"💰 回饋：{rule['rate']}\n\n"
                 msg += f"📋 怎麼刷：\n{rule['how']}\n"
-
                 if rule.get("backup"):
                     msg += f"\n🥈 備選：{rule['backup']}\n"
-
                 if rule.get("caution"):
                     msg += f"\n⚠️ 注意：{rule['caution']}"
-
                 return msg
-
-    # 找不到關鍵字時的預設回覆
     return (
         "🤔 我不太確定這個消費情境，建議直接刷：\n\n"
         "🏆 永豐大戶卡\n"
         "💰 回饋：3.5%（國內全通路）\n\n"
-        "📋 怎麼刷：\n直接刷卡，不需切換任何方案，最無腦。\n\n"
-        "💡 你可以試著描述更多細節，例如：\n"
-        "「在蝦皮買東西」、「去全家」、「日本旅遊」等"
+        "📋 怎麼刷：\n直接刷卡，不需切換任何方案，最無腦。"
     )
 
 
