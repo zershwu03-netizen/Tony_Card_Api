@@ -249,7 +249,7 @@ SYSTEM_PROMPT = f"""你是一位專業的信用卡刷卡顧問，擅長語意理
 def get_advice(text: str) -> str:
     try:
         response = gemini_client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash-lite",
             contents=[
                 {"role": "user", "parts": [{"text": SYSTEM_PROMPT + "\n\n請確認你理解以上規則。"}]},
                 {"role": "model", "parts": [{"text": "明白！我會根據語意判斷消費情境，只推薦指定的11張卡，並且一定給出最接近的建議。請問您要在哪裡消費？"}]},
