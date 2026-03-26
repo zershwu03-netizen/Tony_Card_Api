@@ -1,5 +1,4 @@
 import os
-import json
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -8,147 +7,183 @@ from linebot.v3.messaging import (
     ReplyMessageRequest, TextMessage
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
-import anthropic
 
 app = Flask(__name__)
 
-# 從環境變數讀取金鑰
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
-anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-
-# ──────────────────────────────────────────
-# 你的信用卡資料（可自行更新）
-# ──────────────────────────────────────────
-CARDS_INFO = """
-你的11張信用卡（2026上半年現行優惠）：
-
-1. 永豐大戶卡（DAWHO）
-   - 大戶等級（帳戶存10萬）：國內3.5%、國外4.5%，全通路無腦刷，無月上限
-   - 大戶Plus等級（存100萬）：國內5%、國外6%，月上限500元
-   - 悠遊卡自動加值：大戶3%、Plus 5%
-   - 特色：不限通路、不需切換，最無腦
-
-2. 台新黑狗卡（台新 Richart 卡）
-   ★ 使用前須在 Richart Life APP 切換方案（每日可切換一次）
-   需設定台新帳戶自動扣繳才享最高回饋
-   - Pay著刷：台新Pay 3.8%（7-11/全家/新光三越等11萬家）；LINE Pay 2.3%
-   - 天天刷 3.3%：超商/量販/藥妝/交通/加油充電
-   - 大筆刷 3.3%：百貨（新光三越/SOGO/遠東）/UNIQLO/ZARA/IKEA等
-   - 好饗刷 3.3%：全台餐廳/Uber Eats/foodpanda/KTV/指定飯店
-   - 數趣刷 3.3%：蝦皮/momo/酷澎/PChome/Apple台灣官網
-   - 玩旅刷 3.3%：海外消費/機票/訂房
-   - 假日刷 2%：假日不限通路（含LINE Pay/街口）
-   - 保費：免切換1.3%無上限
-
-3. 玉山 Unicard（one for all）
-   ★ 每月底前在玉山Wallet APP切換方案
-   - 基本1%（需帳單e化+玉山帳戶自動扣繳）
-   - 簡單選：百大特店合計3%，月上限1,000點
-   - 任意選：自選8家特店合計3.5%，月上限1,000點
-   - UP選：百大特店合計4.5%，月上限5,000點（需149點訂閱費）
-   - 百大特店含LINE Pay/蝦皮/momo/Uber Eats/家樂福/各大百貨等
-   - 注意：不支援LINE Pay/街口間接刷卡享特店回饋
-
-4. 玉山 UBear 卡
-   - 網購/行動支付（LINE Pay/街口/蝦皮/momo/線上消費）：3%，月上限150元（約7,500元）
-   - 訂閱服務（Netflix/ChatGPT/Gemini/Steam/Nintendo/PS）：10%，月上限100元
-   - 超商/全聯/速食：不適用，僅1%
-
-5. 玉山熊本熊向左走卡（日圓雙幣卡）
-   - 日本一般消費：2.5%無上限
-   - 日本指定商店：最高8.5%（需登錄，月上限500元）
-   - 日本PayPay：3.5%+免手續費，季上限100元
-
-6. 玉山 Pi 拍錢包聯名卡
-   - 一般消費：基本1%，月滿3萬享3%（月上限1,000P）
-   - 全家（綁Pi App結帳）：5%，月上限100P
-   - 保費：1.2%無上限，或最高12期0利率
-
-7. 中信 foodpanda 聯名卡
-   - foodpanda平台：最高5%胖達幣（月上限200元）
-   - 國內一般：1%；海外實體：2%
-
-8. 國泰世華蝦皮購物聯名卡
-   - 蝦皮站內：0.5%；超品牌日：6%（需登錄）
-   - 指定站外通路：最高7%（需每波登錄，上限3,000蝦幣）
-   - LINE Pay/街口不適用
-
-9. 富邦 momo 聯名卡
-   - momo站內：3%（月上限1,000點）；指定品牌：最高7%（免登錄）
-   - 站外一般：1%；捷運（一卡通）：2%無上限
-
-10. 中信中油聯名卡
-    - 中油直營站：VIP點數約0.5%
-    - 配合中油Pay週一儲值：總計最高6.8%
-
-11. 聯邦吉鶴卡（JCB晶緻卡）
-    - 日幣計價消費：2.5%無上限
-    - 日本實體+Apple Pay QUICPay（前月帳單滿3萬）：合計最高5%
-    - 日本指定通路：合計最高8%（活動期上限600元）
-    - 萊爾富超商（台灣直刷）：5%無上限
-    - 台灣日系名店（UNIQLO/大創等）：合計5.5%，月上限500元
-    - 國內一般：1%
-"""
-
-SYSTEM_PROMPT = f"""你是一個台灣信用卡刷卡顧問，幫用戶從他持有的信用卡中找出最划算的刷法。
-
-{CARDS_INFO}
-
-根據用戶的消費情境，用繁體中文回覆，格式如下：
-
-🏆 最佳選擇：[卡片名稱]
-💰 回饋：[回饋率]
-
-📋 怎麼刷：
-[2-4句具體說明，包含：要切換什麼方案、用什麼方式付款、有什麼條件]
-
-🥈 備選：[卡片名稱] [回饋率]
-[一句說明]
-
-⚠️ 注意：[重要限制，若無則省略此行]
-
-規則：
-- 只推薦用戶持有的11張卡
-- 台新Richart必須說明切換哪個方案
-- 玉山Unicard必須說明選哪個方案
-- 回答要簡潔，手機讀起來不費力
-- 只回答刷卡建議，不回答其他問題"""
-
-
-def get_card_advice(user_message: str) -> str:
-    """呼叫 Claude API 取得刷卡建議"""
-    try:
-        response = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=600,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": f"消費情境：{user_message}"}
-            ]
-        )
-        return response.content[0].text
-    except Exception as e:
-        return f"抱歉，分析時發生錯誤，請稍後再試。\n（錯誤：{str(e)[:50]}）"
 
 
 # ──────────────────────────────────────────
-# LINE Webhook 路由
+# 刷卡規則判斷邏輯
 # ──────────────────────────────────────────
+
+RULES = [
+    {
+        "keywords": ["netflix", "chatgpt", "gemini", "steam", "nintendo", "playstation", "ps5", "訂閱"],
+        "card": "玉山 UBear 卡",
+        "rate": "10%",
+        "how": "直接刷玉山 UBear 卡，於原平台消費（不可透過 Google/PayPal 代扣）。月上限 100 元回饋。",
+        "caution": "超商/全聯不適用此回饋，僅限指定訂閱平台。"
+    },
+    {
+        "keywords": ["全家", "familymart", "family mart"],
+        "card": "玉山 Pi 拍錢包聯名卡",
+        "rate": "5%",
+        "how": "打開 Pi 拍錢包 App，綁定玉山 Pi 卡後，在全家直接用 Pi App 掃碼結帳。月上限 100 P幣（約 2,000 元額度）。",
+        "backup": "聯邦吉鶴卡（不適用）/ 台新Richart卡切換「Pay著刷」用台新Pay結帳 3.8%",
+        "caution": "必須用 Pi 拍錢包 App 掃碼才有 5%，直接刷實體卡只有 1%。"
+    },
+    {
+        "keywords": ["7-11", "711", "seven", "全聯", "px", "pxmart", "萊爾富", "hilife", "ok超商", "超商"],
+        "card": "台新 Richart 卡",
+        "rate": "3.8%",
+        "how": "在 Richart Life App 切換「Pay著刷」方案，結帳時用台新Pay（或 Apple Pay / Google Pay 綁台新卡）掃碼付款。",
+        "backup": "永豐大戶卡 3.5%（無腦刷，不需切換）",
+        "caution": "萊爾富可改刷聯邦吉鶴卡享 5% 折扣（直刷或 Apple Pay）。"
+    },
+    {
+        "keywords": ["蝦皮", "shopee"],
+        "card": "國泰世華蝦皮聯名卡",
+        "rate": "0.5%（平時）/ 6%（超品牌日需登錄）",
+        "how": "直接在蝦皮 App 結帳時選擇蝦皮聯名卡付款。超品牌日記得提前去蝦皮 App 登錄活動。",
+        "backup": "台新 Richart 卡切換「數趣刷」3.3% / 玉山 UBear 卡 3%（月上限 7,500 元）",
+        "caution": "平時 0.5% 回饋偏低，建議蝦皮一般購物優先用台新數趣刷或 UBear 卡。"
+    },
+    {
+        "keywords": ["momo", "momo購物", "富邦momo"],
+        "card": "富邦 momo 聯名卡",
+        "rate": "3%（一般）/ 最高 7%（指定品牌）",
+        "how": "在 momo 購物網結帳時選擇富邦 momo 卡付款。指定品牌免登錄自動加碼，結帳前可查看是否有 +4% 標示。",
+        "backup": "台新 Richart 卡切換「數趣刷」3.3% / 玉山 UBear 卡 3%",
+        "caution": "momo 站內 3% 月上限 1,000 mo幣（約 33,333 元），超過後回饋降低。"
+    },
+    {
+        "keywords": ["foodpanda", "熊貓", "外送", "uber eats", "ubereats"],
+        "card": "中信 foodpanda 聯名卡",
+        "rate": "最高 5%",
+        "how": "在 foodpanda App 結帳時選擇中信 foodpanda 聯名卡付款，1% 基本 + 加碼 4%，月上限 200 胖達幣。",
+        "backup": "台新 Richart 卡切換「好饗刷」3.3%（Uber Eats / foodpanda 都適用）",
+        "caution": "中信 foodpanda 卡的 5% 只限 foodpanda 平台，Uber Eats 請用台新好饗刷。"
+    },
+    {
+        "keywords": ["中油", "加油", "cpc"],
+        "card": "中信中油聯名卡",
+        "rate": "最高 6.8%",
+        "how": "下載中油 App，綁定中信中油聯名卡，週一在 App 內先儲值 3,000 元，再去中油直營站用中油 Pay 加油。",
+        "backup": "永豐大戶卡 3.5%（直接刷卡，最無腦）",
+        "caution": "最高 6.8% 需要：週一儲值 + 使用中油 Pay + 中油直營站，條件較多。懶得設定就刷永豐大戶卡。"
+    },
+    {
+        "keywords": ["日本", "japan", "藥妝", "松本清", "唐吉訶德", "don quijote", "bic camera", "電器", "免稅"],
+        "card": "玉山熊本熊向左走卡",
+        "rate": "最高 8.5%",
+        "how": "去日本前先登錄活動（玉山官網），在指定商店（藥妝/電器/百貨/樂園）直接刷實體卡或綁 Apple Pay 付款。",
+        "backup": "聯邦吉鶴卡 最高 8%（指定通路含唐吉訶德/UNIQLO等，需 Apple Pay QUICPay）",
+        "caution": "熊本熊卡 8.5% 月上限 500 元，超過後改刷聯邦吉鶴卡補滿額度。"
+    },
+    {
+        "keywords": ["uniqlo", "大創", "daiso", "日系"],
+        "card": "聯邦吉鶴卡",
+        "rate": "5.5%（台灣門市）",
+        "how": "在台灣 UNIQLO / 大創門市，直接刷聯邦吉鶴卡實體卡或用 Apple Pay / Google Pay 綁吉鶴卡付款。月上限 500 元。",
+        "backup": "台新 Richart 卡切換「大筆刷」3.3%（UNIQLO/ZARA 均適用）",
+        "caution": "聯邦吉鶴卡是 JCB，部分小店可能不支援，建議備用台新大筆刷。"
+    },
+    {
+        "keywords": ["百貨", "新光三越", "sogo", "遠東", "漢神", "微風", "誠品"],
+        "card": "台新 Richart 卡",
+        "rate": "3.8%（新光三越）/ 3.3%（其他百貨）",
+        "how": "新光三越：在 Richart Life App 切換「Pay著刷」，用台新Pay結帳享 3.8%。其他百貨：切換「大筆刷」享 3.3%。",
+        "backup": "玉山 Unicard UP選 4.5%（月底前在玉山Wallet選 UP選，並將該百貨加入特店）",
+        "caution": "玉山 Unicard UP選需先訂閱（149點/月），但月上限 5,000 點，大額消費划算。"
+    },
+    {
+        "keywords": ["保費", "保險", "壽險", "車險", "產險"],
+        "card": "台新 Richart 卡",
+        "rate": "1.3%",
+        "how": "直接刷台新 Richart 卡繳保費，免切換、免登錄，自動享 1.3% 台新Point 回饋，無上限。",
+        "backup": "玉山 Pi 拍錢包卡 1.2%（選一次付清，不分期）",
+        "caution": "保費回饋普遍偏低，台新 1.3% 已是你手上最高的了。"
+    },
+    {
+        "keywords": ["海外", "國外", "出國", "歐洲", "美國", "韓國", "泰國"],
+        "card": "永豐大戶卡",
+        "rate": "4.5%（大戶等級）/ 6%（Plus等級）",
+        "how": "直接刷永豐大戶卡，不需切換、不需登錄，全通路海外消費自動 4.5% 回饋。",
+        "backup": "台新 Richart 卡切換「玩旅刷」3.3%（含機票/訂房）",
+        "caution": "日本消費請改用熊本熊卡或吉鶴卡，回饋更高。"
+    },
+    {
+        "keywords": ["一般", "其他", "不知道", "隨便"],
+        "card": "永豐大戶卡",
+        "rate": "3.5%",
+        "how": "直接刷永豐大戶卡，國內全通路無腦 3.5%，不需切換任何方案。",
+        "backup": "台新 Richart 卡假日切換「假日刷」2%（假日不限通路）",
+        "caution": "永豐大戶卡需維持帳戶存款 10 萬以上才有大戶等級。"
+    },
+]
+
+WELCOME_MSG = """👋 你好！我是你的刷卡顧問。
+
+告訴我你要在哪裡消費，我幫你決定刷哪張卡、怎麼刷最划算！
+
+範例：
+・蝦皮買東西
+・在 foodpanda 訂晚餐
+・去全家買咖啡
+・去日本藥妝店
+・訂 Netflix
+・去中油加油
+・新光三越百貨
+
+直接輸入你的消費情境就好 👇"""
+
+
+def get_advice(text: str) -> str:
+    text_lower = text.lower()
+
+    for rule in RULES:
+        for keyword in rule["keywords"]:
+            if keyword in text_lower:
+                msg = f"🏆 最佳選擇：{rule['card']}\n"
+                msg += f"💰 回饋：{rule['rate']}\n\n"
+                msg += f"📋 怎麼刷：\n{rule['how']}\n"
+
+                if rule.get("backup"):
+                    msg += f"\n🥈 備選：{rule['backup']}\n"
+
+                if rule.get("caution"):
+                    msg += f"\n⚠️ 注意：{rule['caution']}"
+
+                return msg
+
+    # 找不到關鍵字時的預設回覆
+    return (
+        "🤔 我不太確定這個消費情境，建議直接刷：\n\n"
+        "🏆 永豐大戶卡\n"
+        "💰 回饋：3.5%（國內全通路）\n\n"
+        "📋 怎麼刷：\n直接刷卡，不需切換任何方案，最無腦。\n\n"
+        "💡 你可以試著描述更多細節，例如：\n"
+        "「在蝦皮買東西」、「去全家」、「日本旅遊」等"
+    )
+
+
+# ──────────────────────────────────────────
+# LINE Webhook
+# ──────────────────────────────────────────
+
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
-
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-
     return "OK"
 
 
@@ -156,21 +191,10 @@ def callback():
 def handle_message(event):
     user_text = event.message.text.strip()
 
-    # 歡迎訊息
-    if user_text in ["你好", "hi", "Hi", "hello", "Hello", "開始", "說明", "help"]:
-        reply = (
-            "👋 你好！我是你的刷卡顧問。\n\n"
-            "告訴我你要在哪裡消費，我幫你決定刷哪張卡、怎麼刷最划算！\n\n"
-            "例如：\n"
-            "・蝦皮買東西 1000 元\n"
-            "・在 foodpanda 訂晚餐\n"
-            "・去全家買咖啡\n"
-            "・去日本旅遊購物\n"
-            "・訂 Netflix\n"
-            "・去中油加油"
-        )
+    if user_text.lower() in ["你好", "hi", "hello", "開始", "help", "說明", "?"]:
+        reply = WELCOME_MSG
     else:
-        reply = get_card_advice(user_text)
+        reply = get_advice(user_text)
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
