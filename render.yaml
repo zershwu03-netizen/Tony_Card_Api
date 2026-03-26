@@ -9,5 +9,3 @@ services:
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
