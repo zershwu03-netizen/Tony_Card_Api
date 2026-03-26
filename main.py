@@ -19,16 +19,14 @@ configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-
 # ──────────────────────────────────────────
-# 刷卡規則（僅限以下11張卡）
+# 刷卡規則（11張卡）
 # ──────────────────────────────────────────
-
 RULES = [
     {
         "keywords": [
             "全家", "familymart", "family mart", "pi錢包", "pi拍錢包",
-            "全家咖啡", "全家便利商店", "全家超商"
+            "全家咖啡", "全家便利商店", "全家超商", "全家買"
         ],
         "card": "玉山 Pi 拍錢包聯名卡",
         "rate": "5%",
@@ -37,7 +35,7 @@ RULES = [
     },
     {
         "keywords": [
-            "foodpanda", "熊貓", "外送", "熊貓外送", "food panda"
+            "foodpanda", "熊貓", "food panda", "熊貓外送", "foodpanda訂餐"
         ],
         "card": "中國信託 foodpanda 聯名卡",
         "rate": "最高 5%",
@@ -46,7 +44,7 @@ RULES = [
     },
     {
         "keywords": [
-            "蝦皮", "shopee", "蝦皮購物", "shopee mall"
+            "蝦皮", "shopee", "蝦皮購物", "shopee mall", "蝦皮買", "蝦皮下單"
         ],
         "card": "國泰世華蝦皮聯名卡",
         "rate": "0.5%（平時）/ 6%（超品牌日需登錄）",
@@ -55,7 +53,7 @@ RULES = [
     },
     {
         "keywords": [
-            "momo", "momo購物", "富邦momo", "momo.com", "momo網購"
+            "momo", "momo購物", "富邦momo", "momo.com", "momo網購", "momo買"
         ],
         "card": "富邦銀行 momo 聯名卡",
         "rate": "3%（一般）/ 最高 7%（指定品牌）",
@@ -64,7 +62,8 @@ RULES = [
     },
     {
         "keywords": [
-            "中油", "加油", "cpc", "台灣中油", "加油站", "油錢", "加95", "加92", "柴油"
+            "中油", "加油", "cpc", "台灣中油", "加油站", "油錢",
+            "加95", "加92", "柴油", "去加油", "加油去"
         ],
         "card": "中國信託中油聯名卡",
         "rate": "最高 6.8%",
@@ -74,8 +73,9 @@ RULES = [
     },
     {
         "keywords": [
-            "吉鶴", "聯邦吉鶴", "聯邦", "uniqlo", "大創", "daiso", "日系",
-            "優衣庫", "無印良品", "muji", "GU", "nitori", "宜得利"
+            "uniqlo", "大創", "daiso", "日系", "優衣庫", "無印良品",
+            "muji", "gu", "nitori", "宜得利", "日系品牌", "日系門市",
+            "吉鶴"
         ],
         "card": "聯邦銀行吉鶴卡",
         "rate": "5.5%（台灣日系門市）",
@@ -84,21 +84,11 @@ RULES = [
     },
     {
         "keywords": [
-            "海外", "國外", "出國", "歐洲", "美國", "韓國", "泰國",
-            "一般", "其他", "不知道", "隨便", "英國", "澳洲", "新加坡",
-            "實體消費", "刷卡", "一般消費"
-        ],
-        "card": "永豐大戶卡",
-        "rate": "3.5%（國內）/ 4.5%（海外）",
-        "how": "直接刷永豐大戶卡，國內全通路無腦 3.5%，海外消費自動 4.5%，不需切換任何方案。",
-        "caution": "需維持帳戶存款 10 萬以上才有大戶等級。日本消費建議改用熊本熊卡回饋更高。"
-    },
-    {
-        "keywords": [
-            "uber eats", "ubereats", "外帶", "餐廳", "吃飯", "台新gogo",
+            "uber eats", "ubereats", "餐廳", "吃飯", "台新gogo",
             "gogo卡", "黑狗卡", "gogo黑狗", "台新黑狗", "吃東西", "用餐",
-            "dinner", "lunch", "breakfast", "早餐", "午餐", "晚餐",
-            "便當", "小吃", "夜市", "飲料", "手搖飲", "珍奶"
+            "早餐", "午餐", "晚餐", "便當", "小吃", "夜市", "飲料",
+            "手搖飲", "珍奶", "外帶", "聚餐", "火鍋", "燒肉", "燒烤",
+            "拉麵", "牛排", "壽司", "麵食", "快餐", "自助餐"
         ],
         "card": "台新 GOGO 黑狗卡",
         "rate": "最高 5%（餐飲/外送）",
@@ -107,23 +97,11 @@ RULES = [
     },
     {
         "keywords": [
-            "one for all", "oneforall", "玉山one", "unicard", "玉山unicard",
-            "超商", "7-11", "711", "全聯", "萊爾富", "ok超商", "hilife",
-            "便利商店", "seven eleven", "統一超商",
-            "line pay", "linepay", "街口", "百貨", "新光三越", "遠東百貨",
-            "家樂福", "簡單選", "任意選", "up選"
-        ],
-        "card": "玉山 ONE for ALL 卡（玉山 Unicard）",
-        "rate": "簡單選 3% / 任意選 3.5% / UP選 4.5%（百大特店，需在玉山Wallet切換方案）",
-        "how": "這張卡有三種方案，在玉山Wallet App月底前切換，以當月最後一天的方案計算整月回饋：\n\n🔹 簡單選（3%）：百大100家特店通通有回饋，月上限1,000點（約刷50,000元封頂）。適合懶得設定的人。\n\n🔸 任意選（3.5%）：從百大特店中自選8家，月上限1,000點（約刷40,000元封頂）。推薦選 LINE Pay + 街口支付 + 常用電商/百貨共8家。\n\n⭐ UP選（4.5%）：需每月支付149點e point訂閱（或上月刷滿3萬/存款30萬免費升級），月上限5,000點。\n\n百大特店包含：LINE Pay、街口支付、台灣中油、高鐵、momo、蝦皮、Uber Eats、foodpanda、新光三越、遠東百貨、家樂福、屈臣氏、中華航空等100+家。",
-        "caution": "切換方式：玉山Wallet App → 我的 → 玉山Unicard-我的方案，月底前切換即可。整月消費以當月最後一天方案計算。非百大特店只有1%基本回饋。月底前記得取消UP選自動續訂以免下月被扣149點。"
-    },
-    {
-        "keywords": [
-            "ubear", "netflix", "chatgpt", "steam", "nintendo", "playstation",
-            "ps5", "訂閱", "disney", "disney+", "youtube premium", "spotify",
-            "apple music", "hbo", "friDay影音", "myVideo", "線上遊戲",
-            "game", "遊戲課金", "app store", "google play"
+            "netflix", "chatgpt", "steam", "nintendo", "playstation",
+            "ps5", "訂閱", "disney", "disney+", "youtube premium",
+            "spotify", "apple music", "hbo", "friday影音", "myvideo",
+            "線上遊戲", "game", "遊戲課金", "app store", "google play",
+            "ubear", "影音平台", "串流"
         ],
         "card": "玉山 UBear 卡",
         "rate": "10%（指定訂閱平台）",
@@ -133,9 +111,10 @@ RULES = [
     {
         "keywords": [
             "日本", "japan", "藥妝", "松本清", "唐吉訶德", "don quijote",
-            "bic camera", "電器", "免稅", "熊本熊", "東京", "大阪", "京都",
-            "北海道", "沖繩", "日本旅遊", "赴日", "cosme", "loft",
-            "animate", "秋葉原", "心齋橋", "新宿"
+            "bic camera", "電器", "免稅", "熊本熊", "東京", "大阪",
+            "京都", "北海道", "沖繩", "日本旅遊", "赴日", "cosme",
+            "loft", "animate", "秋葉原", "心齋橋", "新宿", "涉谷",
+            "原宿", "銀座", "池袋", "梅田", "難波", "道頓堀"
         ],
         "card": "玉山熊本熊向左走卡",
         "rate": "最高 8.5%（日本指定通路）",
@@ -143,50 +122,43 @@ RULES = [
         "backup": "聯邦吉鶴卡 最高 8%（唐吉訶德/UNIQLO等，需 Apple Pay QUICPay）",
         "caution": "熊本熊卡 8.5% 月上限 500 元，超過後改刷聯邦吉鶴卡補滿額度。"
     },
+    {
+        "keywords": [
+            "one for all", "oneforall", "玉山one", "unicard", "玉山unicard",
+            "超商", "7-11", "711", "全聯", "萊爾富", "ok超商", "hilife",
+            "便利商店", "seven eleven", "統一超商", "line pay", "linepay",
+            "街口", "百貨", "新光三越", "遠東百貨", "家樂福",
+            "簡單選", "任意選", "up選", "pxmart", "全聯福利中心"
+        ],
+        "card": "玉山 ONE for ALL 卡（玉山 Unicard）",
+        "rate": "簡單選 3% / 任意選 3.5% / UP選 4.5%",
+        "how": "在玉山Wallet App切換方案：\n🔹 簡單選(3%)：百大特店通通有，月上限1,000點\n🔸 任意選(3.5%)：自選8家特店，月上限1,000點\n⭐ UP選(4.5%)：月訂閱149點，月上限5,000點\n\n推薦選 LINE Pay + 街口 + 常用電商共8家加入任意選。",
+        "caution": "非百大特店只有1%基本回饋。月底前在玉山Wallet App切換方案。"
+    },
+    {
+        "keywords": [
+            "coupang", "酷澎", "pchome", "yahoo購物", "博客來", "生活市集",
+            "樂天", "東森購物", "網購", "網路購物", "線上購物", "電商",
+            "官網下單", "app內購買", "網拍", "91app",
+            "訂房", "booking", "agoda", "hotels.com", "trivago",
+            "airbnb", "住宿", "旅館", "飯店訂房", "民宿",
+            "機票", "航空", "訂機票", "買機票", "廉航",
+            "tiger air", "虎航", "捷星", "亞航", "airasia",
+            "旅遊", "旅行", "出遊", "行程", "出國",
+            "klook", "kkday", "旅遊票券", "景點門票",
+            "海外", "國外", "歐洲", "美國", "韓國", "泰國",
+            "英國", "澳洲", "新加坡", "香港", "澳門", "中國",
+            "法國", "德國", "義大利", "西班牙", "土耳其",
+            "一般消費", "一般", "其他", "不知道", "隨便",
+            "實體消費", "刷卡", "買東西", "消費"
+        ],
+        "card": "永豐大戶卡",
+        "rate": "3.5%（國內）/ 4.5%（海外）",
+        "how": "直接刷永豐大戶卡，國內全通路無腦 3.5%，海外消費自動 4.5%，不需切換任何方案。訂房/機票/旅遊平台也適用。",
+        "backup": "玉山 Unicard UP選（旅遊特店在百大內可達4.5%）",
+        "caution": "需維持帳戶存款 10 萬以上才有大戶等級。日本消費建議改用熊本熊卡回饋更高。"
+    },
 ]
-
-# 語意通路分類（幫助 Gemini 推理）
-CATEGORY_GUIDE = """
-【通路語意分類指南】請用以下分類判斷使用者的消費情境：
-
-1. 網路購物 / 電商平台
-   → 包含：momo、蝦皮、PChome、coupang、酷澎、amazon、亞馬遜、博客來、friDay、
-            樂天、yahoo購物、東森購物、生活市集、91APP、網拍、線上購物、電商、
-            官網下單、app內購買
-   → 推薦：富邦momo聯名卡（momo平台）/ 國泰蝦皮聯名卡（蝦皮）
-
-2. 外送平台
-   → 包含：foodpanda、熊貓、外送、Uber Eats、叫外賣
-   → 推薦：中信foodpanda聯名卡（foodpanda）/ 台新GOGO黑狗卡（Uber Eats）
-
-3. 餐飲 / 實體用餐
-   → 包含：餐廳、吃飯、早午晚餐、便當、小吃、飲料、手搖飲、夜市、火鍋、燒肉
-   → 推薦：台新GOGO黑狗卡
-
-4. 訂閱服務 / 數位內容
-   → 包含：Netflix、Disney+、Spotify、YouTube Premium、ChatGPT、Steam、
-            遊戲課金、App Store、Google Play、線上遊戲
-   → 推薦：玉山UBear卡
-
-5. 日本消費
-   → 包含：日本旅遊、藥妝、唐吉訶德、免稅店、東京/大阪等城市、日本電器
-   → 推薦：玉山熊本熊向左走卡（月上限500元後改聯邦吉鶴卡）
-
-6. 加油
-   → 包含：加油、中油、油費、加95/92
-   → 推薦：中信中油聯名卡
-
-7. 超商
-   → 包含：7-11、全聯、萊爾富、全家（改用Pi錢包）
-   → 推薦：玉山ONE for ALL卡（7-11/全聯）/ 玉山Pi拍錢包卡（全家）
-
-8. 日系品牌實體門市
-   → 包含：UNIQLO、大創、MUJI、GU、宜得利
-   → 推薦：聯邦吉鶴卡
-
-9. 海外 / 一般消費（以上都不符合時）
-   → 推薦：永豐大戶卡
-"""
 
 CARDS_LIST = """1. 玉山 Pi 拍錢包聯名卡
 2. 中國信託 foodpanda 聯名卡
@@ -200,7 +172,7 @@ CARDS_LIST = """1. 玉山 Pi 拍錢包聯名卡
 10. 玉山 UBear 卡
 11. 玉山熊本熊向左走卡"""
 
-WELCOME_MSG = f"""👋 你好！我是你的刷卡顧問。
+WELCOME_MSG = f"""👋 你好！我是你的刷卡顧問 💳
 
 我只推薦以下11張卡的最佳使用方式：
 {CARDS_LIST}
@@ -208,68 +180,79 @@ WELCOME_MSG = f"""👋 你好！我是你的刷卡顧問。
 告訴我你要在哪裡消費，我幫你決定刷哪張最划算！
 
 範例：
-・去全家買咖啡
-・在蝦皮買東西
-・訂 Netflix
-・去日本藥妝店
-・在 momo 網購
-・去中油加油
-・在 coupang 買東西
+・去全家買咖啡 → Pi拍錢包卡 5%
+・在蝦皮買東西 → 蝦皮聯名卡
+・訂 Netflix → UBear卡 10%
+・去日本藥妝店 → 熊本熊卡 8.5%
+・在 momo 網購 → momo聯名卡 3~7%
+・去中油加油 → 中油聯名卡 6.8%
+・coupang/訂房/機票 → 永豐大戶卡 3.5~4.5%
+・Uber Eats/餐廳 → GOGO黑狗卡 5%
 
-直接輸入你的消費情境就好 👇"""
+直接輸入消費情境就好 👇"""
 
 
 def build_rules_text() -> str:
     lines = []
     for rule in RULES:
-        lines.append(f"【關鍵字】{', '.join(rule['keywords'])}")
+        lines.append(f"【關鍵字】{', '.join(rule['keywords'][:8])}...")
         lines.append(f"  最佳卡片：{rule['card']}，回饋：{rule['rate']}")
-        lines.append(f"  怎麼刷：{rule['how']}")
+        lines.append(f"  怎麼刷：{rule['how'][:100]}...")
         if rule.get("backup"):
             lines.append(f"  備選：{rule['backup']}")
         if rule.get("caution"):
-            lines.append(f"  注意：{rule['caution']}")
+            lines.append(f"  注意：{rule['caution'][:80]}...")
         lines.append("")
     return "\n".join(lines)
 
 
-SYSTEM_PROMPT = f"""你是一位專業的信用卡刷卡顧問，擅長語意理解，能判斷使用者描述的消費情境屬於哪種通路類別。
+SYSTEM_PROMPT = f"""你是一位專業的信用卡刷卡顧問，擅長語意理解。
 
-【重要限制】你只能從以下11張卡中給建議，絕對不能推薦其他任何卡片：
+【重要限制】你只能從以下11張卡中給建議：
 {CARDS_LIST}
 
-{CATEGORY_GUIDE}
+【通路對應】
+- 全家超商 → 玉山Pi拍錢包卡 5%（需用Pi App掃碼）
+- foodpanda外送 → 中信foodpanda聯名卡 5%
+- 蝦皮購物 → 國泰蝦皮聯名卡 6%（超品牌日）
+- momo購物 → 富邦momo聯名卡 3~7%
+- 加油/中油 → 中信中油聯名卡 6.8%
+- UNIQLO/大創/MUJI/日系品牌台灣門市 → 聯邦吉鶴卡 5.5%
+- Uber Eats/餐廳/外食 → 台新GOGO黑狗卡 5%
+- Netflix/Disney+/Spotify/Steam/訂閱 → 玉山UBear卡 10%
+- 日本旅遊/藥妝/電器/免稅 → 玉山熊本熊向左走卡 8.5%
+- 7-11/全聯/LINE Pay/街口/百貨 → 玉山ONE for ALL卡 3~4.5%
+- coupang/酷澎/訂房/agoda/機票/旅遊/海外/一般消費 → 永豐大戶卡 3.5~4.5%
 
-詳細規則表：
-{build_rules_text()}
+【語意擴展範例】
+- "酷澎"="coupang"=網購平台 → 永豐大戶卡
+- "訂房"="booking"="agoda"=住宿訂購 → 永豐大戶卡
+- "買機票"="航空"=機票訂購 → 永豐大戶卡
+- "東京"="大阪"=日本城市 → 熊本熊卡
+- "珍奶"="手搖飲"=飲料店=餐飲 → GOGO黑狗卡
+- "便當"="自助餐"=外食 → GOGO黑狗卡
 
-回覆規則：
-1. 先判斷使用者的消費屬於哪個通路類別，再對應推薦最適合的卡片
-2. 即使使用者用的詞不在關鍵字內，也要用語意判斷（例如「酷澎」=「coupang」=網購平台=推薦momo聯名卡）
-3. 只從上面11張卡中推薦，絕對不推薦其他卡片
-4. 用親切口語的繁體中文回覆，不要太正式
-5. 回覆格式：
-   🏆 最佳選擇：[卡片名稱]
-   💰 回饋：[回饋率]
+回覆格式（簡潔，不超過250字）：
+🏆 最佳選擇：[卡片名稱]
+💰 回饋：[回饋率]
 
-   📋 怎麼刷：
-   [說明]
+📋 怎麼刷：
+[說明]
 
-   🥈 備選：[備選卡片]（如果有的話）
+🥈 備選：[備選卡片]（如果有的話）
 
-   ⚠️ 注意：[注意事項]（如果有的話）
-6. 如果情境不明確，請追問使用者
-7. 回覆要簡潔，不要超過 300 字"""
+⚠️ 注意：[注意事項]（如果有的話）
+
+如果情境完全不明確，請追問使用者。絕對不能說「沒有特別優惠」，一定要給出最接近的建議。"""
 
 
 def get_advice(text: str) -> str:
     try:
-        # 多輪對話方式，讓 Gemini 更好地遵循角色設定
         response = gemini_client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-1.5-flash",
             contents=[
-                {"role": "user", "parts": [{"text": SYSTEM_PROMPT + "\n\n請確認你理解以上規則，並只推薦指定的11張卡。"}]},
-                {"role": "model", "parts": [{"text": "我明白了！我會根據語意判斷消費情境，並且只推薦您指定的11張卡片。請問您要在哪裡消費呢？"}]},
+                {"role": "user", "parts": [{"text": SYSTEM_PROMPT + "\n\n請確認你理解以上規則。"}]},
+                {"role": "model", "parts": [{"text": "明白！我會根據語意判斷消費情境，只推薦指定的11張卡，並且一定給出最接近的建議。請問您要在哪裡消費？"}]},
                 {"role": "user", "parts": [{"text": text}]},
             ]
         )
@@ -281,9 +264,11 @@ def get_advice(text: str) -> str:
 
 def get_advice_fallback(text: str) -> str:
     text_lower = text.lower()
+
+    # 先做精確關鍵字匹配
     for rule in RULES:
         for keyword in rule["keywords"]:
-            if keyword in text_lower:
+            if keyword and keyword in text_lower:
                 msg = f"🏆 最佳選擇：{rule['card']}\n"
                 msg += f"💰 回饋：{rule['rate']}\n\n"
                 msg += f"📋 怎麼刷：\n{rule['how']}\n"
@@ -292,11 +277,15 @@ def get_advice_fallback(text: str) -> str:
                 if rule.get("caution"):
                     msg += f"\n⚠️ 注意：{rule['caution']}"
                 return msg
-    return (
-        "🤔 這11張卡在您描述的消費情境沒有特別優惠。\n\n"
-        "可以換個消費情境試試看，例如：\n"
-        "全家、蝦皮、momo、日本、加油、Netflix 等 😊"
-    )
+
+    # 沒有匹配到 → 預設給永豐大戶卡
+    default = RULES[-1]
+    msg = f"🏆 最佳選擇：{default['card']}\n"
+    msg += f"💰 回饋：{default['rate']}\n\n"
+    msg += f"📋 怎麼刷：\n{default['how']}\n"
+    msg += f"\n⚠️ 注意：{default['caution']}\n\n"
+    msg += "💡 如果你有更具體的消費情境（例如：全家、蝦皮、日本、加油），告訴我可以推薦更高回饋的卡！"
+    return msg
 
 
 # ──────────────────────────────────────────
@@ -318,7 +307,7 @@ def callback():
 def handle_message(event):
     user_text = event.message.text.strip()
 
-    if user_text.lower() in ["你好", "hi", "hello", "開始", "help", "說明", "?"]:
+    if user_text.lower() in ["你好", "hi", "hello", "開始", "help", "說明", "?", "？", "選單", "menu"]:
         reply = WELCOME_MSG
     else:
         reply = get_advice(user_text)
